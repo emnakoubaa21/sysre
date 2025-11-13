@@ -32,15 +32,11 @@ class RecommendationSystem:
     def load_all(_self):
         """Charge tous les modèles et données nécessaires"""
         try:
-            st.info("🔄 Chargement des données...")
-            
             # ========================================
             # 1. CHARGER songs_content_features.csv (CONTIENT TOUT)
             # ========================================
             try:
-                st.info("📊 Chargement des métadonnées avec features audio...")
                 _self.songs_metadata = pd.read_csv(SONGS_CONTENT_FEATURES)
-                st.success(f"✅ {len(_self.songs_metadata)} chansons chargées")
                 
                 # Vérifier les colonnes essentielles
                 required_cols = ['song_id', 'title', 'artist', 'genre']
@@ -49,9 +45,6 @@ class RecommendationSystem:
                 if missing_cols:
                     st.error(f"❌ Colonnes manquantes : {missing_cols}")
                     return False
-                
-                # Afficher les colonnes disponibles pour debug
-                st.caption(f"📋 Colonnes disponibles : {list(_self.songs_metadata.columns)}")
                 
                 # Lister les features audio disponibles
                 audio_cols = ['tempo', 'energy', 'danceability', 'valence', 'acousticness', 
@@ -67,16 +60,6 @@ class RecommendationSystem:
                     else:
                         _self.songs_metadata[col] = _self.songs_metadata[col].fillna('Unknown')
                 
-                st.info(f"✅ Features audio : {len(available_audio)}/{len(audio_cols)} disponibles")
-                
-                # Afficher les colonnes chargées
-                if available_audio:
-                    st.caption(f"   {', '.join(available_audio[:6])}...")
-                
-                # Afficher un exemple de chanson pour vérifier
-                example = _self.songs_metadata.iloc[0]
-                st.caption(f"📄 Exemple - {example['title']} : tempo={example.get('tempo', 0):.3f}, energy={example.get('energy', 0):.3f}")
-                
             except FileNotFoundError:
                 st.error(f"❌ Fichier non trouvé : {SONGS_CONTENT_FEATURES}")
                 st.error("⚠️ Exécutez d'abord le Notebook 2 (cellule de création songs_content_features.csv) !")
@@ -91,9 +74,7 @@ class RecommendationSystem:
             # 2. CHARGER LES DONNÉES D'ENTRAÎNEMENT
             # ========================================
             try:
-                st.info("📊 Chargement des données d'entraînement...")
                 _self.train_df = pd.read_csv(TRAIN_DATA)
-                st.success(f"✅ {len(_self.train_df)} interactions chargées")
             except Exception as e:
                 st.error(f"❌ Impossible de charger train_data.csv: {e}")
                 return False
@@ -107,7 +88,6 @@ class RecommendationSystem:
             # ========================================
             # 4. CHARGER LE MODÈLE CONTENT-BASED
             # ========================================
-            st.info("🎸 Chargement du modèle Content-Based...")
             try:
                 with open(CONTENT_MODEL, 'rb') as f:
                     content_data = pickle.load(f)
@@ -123,8 +103,6 @@ class RecommendationSystem:
                     # Si c'est juste la matrice
                     _self.content_model = content_data
                 
-                st.success("✅ Modèle Content-Based chargé")
-                
             except FileNotFoundError:
                 st.error(f"❌ Fichier non trouvé : {CONTENT_MODEL}")
                 st.error("⚠️ Exécutez d'abord le Notebook 3 (Cellule 1 - Content-Based) !")
@@ -136,7 +114,6 @@ class RecommendationSystem:
             # ========================================
             # 5. CHARGER LE MODÈLE COLLABORATIVE
             # ========================================
-            st.info("🤝 Chargement du modèle Collaborative...")
             try:
                 with open(COLLABORATIVE_MODEL, 'rb') as f:
                     collab_data = pickle.load(f)
@@ -145,8 +122,6 @@ class RecommendationSystem:
                     _self.topN_by_user = collab_data.get('topN_by_user', {})
                 else:
                     _self.topN_by_user = {}
-                
-                st.success(f"✅ Modèle Collaborative chargé ({len(_self.topN_by_user)} utilisateurs)")
                 
             except FileNotFoundError:
                 st.error(f"❌ Fichier non trouvé : {COLLABORATIVE_MODEL}")
@@ -159,25 +134,20 @@ class RecommendationSystem:
             # ========================================
             # 6. CHARGER LA CONFIGURATION HYBRID
             # ========================================
-            st.info("🔀 Chargement de la configuration Hybrid...")
             try:
                 with open(HYBRID_CONFIG, 'r') as f:
                     _self.hybrid_config = json.load(f)
-                st.success("✅ Configuration Hybrid chargée")
             except FileNotFoundError:
-                st.warning("⚠️ Fichier hybrid_config.json non trouvé, utilisation des valeurs par défaut")
                 _self.hybrid_config = {
                     'content_weight': 0.5,
                     'collaborative_weight': 0.5
                 }
             except Exception as e:
-                st.error(f"❌ Erreur Hybrid config: {str(e)}")
                 _self.hybrid_config = {
                     'content_weight': 0.5,
                     'collaborative_weight': 0.5
                 }
             
-            st.success("✅ Tous les modèles sont chargés !")
             return True
             
         except Exception as e:

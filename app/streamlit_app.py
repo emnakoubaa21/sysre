@@ -286,6 +286,11 @@ with tab1:
 with tab2:
     st.header("🎵 Générer des recommandations")
     
+    # ✅ Initialiser session_state
+    if 'recommendations' not in st.session_state:
+        st.session_state.recommendations = None
+        st.session_state.model_used = None
+    
     # Sélection du modèle
     model_choice = st.radio(
         "Choisir un modèle",
@@ -319,31 +324,138 @@ with tab2:
                     for song_id, score in recs
                 ]
         
-        # Affichage des résultats
+        # ✅ Sauvegarder dans session_state
+        st.session_state.recommendations = recommendations
+        st.session_state.model_used = model_choice
+    
+    # ✅ Afficher les recommandations si elles existent
+    if st.session_state.recommendations is not None:
+        recommendations = st.session_state.recommendations
+        model_choice = st.session_state.model_used
+        
         if not recommendations:
             st.error(f"❌ Aucune recommandation disponible avec le modèle {model_choice}")
         else:
             st.success(f"✅ {len(recommendations)} recommandations générées avec {model_choice}")
             
+            st.markdown("---")
+            
             # Mode d'affichage
+            st.subheader("Mode d'affichage")
             display_mode = st.radio(
-                "Mode d'affichage",
+                "Choisir le mode",
                 ["Cartes", "Tableau"],
                 horizontal=True,
+                label_visibility="collapsed",
                 key="display_mode"
             )
             
-            # ✅ CORRECTION : Afficher selon le mode choisi
+            st.markdown("---")
+            
+            # ✅ AFFICHAGE EN MODE CARTES
             if display_mode == "Cartes":
-                # Affichage en cartes
+                st.subheader(f"🎵 Recommandations {model_choice}")
+                
                 for i, song in enumerate(recommendations, 1):
                     st.markdown(f"### 🎵 Recommandation #{i}")
                     display_song_card(song, show_score=True, show_details=True)
             
-            else:  # Tableau
-                # ✅ CORRECTION : Afficher le tableau correctement
-                st.markdown(f"### 📊 Recommandations {model_choice}")
-                display_recommendations_table(recommendations)
+            # ✅ AFFICHAGE EN MODE TABLEAU
+            elif display_mode == "Tableau":
+                st.subheader(f"📊 Recommandations {model_choice}")
+                
+                # Créer le DataFrame
+                df = pd.DataFrame(recommendations)
+                
+                # Colonnes à afficher
+                columns_to_display = ['title', 'artist', 'genre', 'album', 'release_year']
+                
+                # Ajouter le score si disponible
+                if 'score' in df.columns:
+                    def normalize_score(x):
+                        try:
+                            score = float(x)
+                            if score > 1.0:
+                                score = min(score / 10.0, 1.0)
+                            return max(0.0, min(1.0, abs(score)))
+                        except:
+                            return 0.0
+                    
+                    df['Score'] = df['score'].apply(normalize_score).apply(lambda x: f"{x:.3f}")
+                    columns_to_display.append('Score')
+                
+                # Ajouter durée si disponible
+                if 'duration_sec' in df.columns:
+                    df['Durée'] = df['duration_sec'].apply(
+                        lambda x: f"{int(x//60)}:{int(x%60):02d}" if x > 0 else "N/A"
+                    )
+                    columns_to_display.append('Durée')
+                
+                # Ajouter popularité si disponible
+                if 'popularity' in df.columns:
+                    df['Popularité'] = df['popularity'].apply(
+                        lambda x: f"{int(x)}/100" if x > 0 else "N/A"
+                    )
+                    columns_to_display.append('Popularité')
+                
+                # Filtrer les colonnes disponibles
+                available_columns = [col for col in columns_to_display if col in df.columns]
+                
+                if not available_columns:
+                    st.error("Aucune colonne valide trouvée")
+                else:
+                    df_display = df[available_columns].copy()
+                    
+                    # Renommer les colonnes
+                    rename_dict = {
+                        'title': 'Titre',
+                        'artist': 'Artiste',
+                        'genre': 'Genre',
+                        'album': 'Album',
+                        'release_year': 'Année'
+                    }
+                    
+                    df_display = df_display.rename(columns={
+                        col: rename_dict.get(col, col) for col in df_display.columns
+                    })
+                    
+                    # Ajouter un index commençant à 1
+                    df_display.insert(0, '#', range(1, len(df_display) + 1))
+                    
+                    # Afficher le tableau avec style
+                    st.dataframe(
+                        df_display,
+                        use_container_width=True,
+                        hide_index=True,
+                        height=500
+                    )
+                    
+                    # Statistiques rapides
+                    col1, col2, col3 = st.columns(3)
+                    with col1:
+                        genres_unique = df['genre'].nunique()
+                        st.metric("Genres différents", genres_unique)
+                    with col2:
+                        artists_unique = df['artist'].nunique()
+                        st.metric("Artistes différents", artists_unique)
+                    with col3:
+                        if 'score' in df.columns:
+                            avg_score = df['score'].apply(
+                                lambda x: max(0.0, min(1.0, abs(float(x)) if float(x) <= 1 else float(x)/10))
+                            ).mean()
+                            st.metric("Score moyen", f"{avg_score:.3f}")
+                    
+                    st.markdown("---")
+                    
+                    # Bouton pour télécharger en CSV
+                    csv = df_display.to_csv(index=False).encode('utf-8')
+                    st.download_button(
+                        label="📥 Télécharger les recommandations (CSV)",
+                        data=csv,
+                        file_name=f"recommandations_{model_choice}_{selected_user}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                        mime="text/csv",
+                        use_container_width=True
+                    )
 
 
 # =============================================================================
