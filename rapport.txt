@@ -321,31 +321,480 @@ Filtrage contextuel : Intégrer l'heure, l'humeur, la météo
 A/B Testing : Valider avec utilisateurs réels en production
 
 
-📱 8. APPLICATION WEB (Phase 4)
-8.1 Technologie
-Streamlit - Framework Python pour applications data science
-8.2 Fonctionnalités Prévues
+📱 8. APPLICATION WEB INTERACTIVE
 
-Sélection utilisateur
-Affichage de l'historique d'écoute
-Génération de recommandations (3 modèles)
-Comparaison des résultats
-Statistiques et visualisations
+8.1 Vue d'Ensemble
+Technologies utilisées :
+• Framework : Streamlit 1.28+
+• Visualisation : Plotly Express 5.18+
+• Manipulation de données : Pandas 2.1+
+• Déploiement : Local (possibilité de déploiement cloud)
+
+Architecture de l'application :
+app/
+├── config.py              # Configuration (constantes, styles CSS, emojis)
+├── models.py              # Classe RecommendationSystem (chargement modèles)
+├── utils.py               # Fonctions d'affichage (cartes, tableaux, graphiques)
+└── streamlit_app.py       # Application principale (interface utilisateur)
+
+8.2 Fichier config.py
+Rôle : Centraliser toutes les configurations de l'application
+
+A. Chemins des fichiers :
+• Données : TRAIN_DATA, TEST_DATA, SONGS_CONTENT_FEATURES
+• Modèles : CONTENT_MODEL, COLLABORATIVE_MODEL, HYBRID_CONFIG
+• Rapports : EVALUATION_REPORT, MODELING_SUMMARY
+
+B. Paramètres de l'interface :
+• Titre : "🎵 Système de Recommandation Musicale"
+• Layout : "wide" (pleine largeur)
+• Recommandations : MIN=5, MAX=20, DEFAULT=10
+
+C. Styles visuels :
+• CSS personnalisé pour cartes de chansons
+• Palette de couleurs (Spotify-inspired) : #1DB954, #191414
+• Emojis mappés par genre (🎤 Pop, 🎸 Rock, 🎷 Jazz, 🎧 EDM)
+• Emojis mappés par contexte (💪 Workout, 😌 Relax, 🚗 Commute)
+
+8.3 Fichier models.py
+Rôle : Gérer le chargement et l'utilisation des modèles de recommandation
+
+Classe RecommendationSystem :
+
+A. Méthode load_all() :
+• Charge songs_content_features.csv (200 chansons + 22 colonnes)
+• Charge train_data.csv (56,101 interactions)
+• Charge les 3 modèles sauvegardés (.pkl)
+• Crée les mappings song_id ↔ index
+• Utilise @st.cache_resource pour éviter rechargements
+• ✅ OPTIMISATION : Aucun message de debug affiché (interface propre)
+
+B. Méthodes de recommandation :
+1. recommend_content_based(user_id, n=10)
+   → Retourne [(song_id, score), ...] basé sur similarité cosinus
+
+2. recommend_collaborative(user_id, n=10)
+   → Retourne [(song_id, score), ...] depuis SVD pré-calculé
+
+3. recommend_hybrid(user_id, n=10, alpha=0.5, beta=0.5)
+   → Fusion pondérée avec fallback automatique
+   → Normalisation min-max des scores
+   → Garantit 100% de couverture
+
+C. Méthodes utilitaires :
+• get_song_info(song_id) → Dictionnaire complet (métadonnées + 12 features audio)
+• get_user_history(user_id, n=10) → Historique d'écoute
+• get_model_stats() → Statistiques depuis modeling_summary.json
+
+8.4 Fichier utils.py
+Rôle : Fonctions d'affichage et visualisation
+
+A. display_song_card(song, show_score=True, show_details=True)
+Affiche une carte de chanson avec :
+• En-tête : Titre de la chanson (🎵)
+• Métadonnées (3 colonnes) :
+  - Colonne 1 : Artiste, Genre (avec emoji)
+  - Colonne 2 : Album, Année
+  - Colonne 3 : Durée (MM:SS), Popularité (/100)
+• Score de recommandation : Barre de progression normalisée [0-1]
+• Section dépliable "🎧 Détails audio" :
+  ◦ Tempo (BPM) - dénormalisé de [-1,1] vers [60-180]
+  ◦ Energy [0-1] - dénormalisé de [-1,1]
+  ◦ Danceability [0-1] - dénormalisé
+  ◦ Valence [0-1] - dénormalisé
+  ◦ Informations supplémentaires : Mode (Major/Minor), Tonalité (C#, F, etc.), 
+    Acoustique, Instrumental, Live, Volume (dB), Langue, Explicite
+
+✅ Innovation : Dénormalisation automatique des features audio
+   • Détecte si valeurs normalisées (|x| < 2)
+   • Convertit vers échelles lisibles pour l'utilisateur
+   • Affiche "N/A" si valeur = 0 (au lieu de 0.000)
+
+B. display_recommendations_table(recommendations)
+Affiche les recommandations sous forme de tableau avec :
+• Colonnes : #, Titre, Artiste, Genre, Album, Année, Score, Durée, Popularité
+• Normalisation automatique des scores
+• Style DataFrame Streamlit avec largeur adaptative
+• Tri possible par colonne (natif Streamlit)
+
+C. plot_genre_distribution(recommendations)
+Graphique en barres groupées (Plotly) montrant :
+• Axe X : Genres musicaux
+• Axe Y : Nombre de chansons
+• 3 barres par genre : Content-Based, Collaborative, Hybrid
+• Palette : #FF6B6B (rouge), #4ECDC4 (turquoise), #45B7D1 (bleu)
+
+D. plot_diversity_comparison(recommendations)
+Graphique en barres comparant la diversité :
+• Diversité = Genres uniques / Total chansons
+• Affichage en pourcentage
+• Aide à identifier le modèle le plus exploratoire
+
+8.5 Fichier streamlit_app.py - Structure
+Organisation en 4 onglets principaux :
+
+┌─────────────────────────────────────────────────────────────┐
+│  🎵 Système de Recommandation Musicale                      │
+│  Système intelligent basé sur trois approches               │
+├─────────────────────────────────────────────────────────────┤
+│  Sidebar                                                     │
+│  ├─ 👤 Sélectionner un utilisateur (1000-1049)             │
+│  ├─ 🔢 Nombre de recommandations (5-20, défaut 10)          │
+│  ├─ 🔀 Modèle Hybrid                                        │
+│  │   ├─ Content-Based (α) : slider 0.0-1.0                 │
+│  │   └─ Collaborative (β) : slider 0.0-1.0                 │
+│  ├─ 🔄 Recharger les données                                │
+│  └─ ℹ️ Paramètres actuels                                   │
+├─────────────────────────────────────────────────────────────┤
+│  Onglets                                                     │
+│  [🏠 Accueil] [🎵 Recommandations] [📊 Comparaison] [📈 Stats] │
+└─────────────────────────────────────────────────────────────┘
+
+8.6 Onglet 1 : 🏠 Accueil
+
+A. Profil utilisateur
+Affiche les statistiques de l'utilisateur sélectionné :
+• Métrique 1 : Total écoutes (nombre d'interactions)
+• Métrique 2 : Chansons aimées (liked=1)
+• Métrique 3 : Genre préféré (avec emoji, ex: 🎤 Pop)
+• Métrique 4 : Artistes écoutés (nombre unique)
+
+B. Historique d'écoute
+Tableau des 10 dernières écoutes avec :
+• Colonnes : Titre, Artiste, Genre, Album, Statut (❤️ Aimé / 👍 Écouté)
+• Tri par timestamp décroissant
+• Style avec DataFrame Streamlit
+
+C. Graphique de distribution
+Graphique circulaire (Pie chart Plotly) :
+• Répartition des genres dans l'historique de l'utilisateur
+• Couleurs : palette Set3 (lisible et agréable)
+• Affichage du pourcentage par genre
+
+8.7 Onglet 2 : 🎵 Recommandations
+
+A. Sélection du modèle
+Radio buttons horizontal :
+• Content-Based
+• Collaborative
+• Hybrid (avec paramètres α et β de la sidebar)
+
+B. Génération des recommandations
+Bouton : "🎵 Générer les recommandations" (type primary, rouge)
+• Spinner pendant le calcul
+• Sauvegarde dans st.session_state (persiste entre changements de mode)
+• Message de succès : "✅ 10 recommandations générées avec [Modèle]"
+
+✅ Innovation : Utilisation de session_state
+   • Les recommandations restent affichées après génération
+   • Le changement de mode d'affichage ne les efface pas
+   • Expérience utilisateur fluide sans rechargements
+
+C. Mode d'affichage
+Radio buttons horizontal :
+• Cartes : Affichage détaillé avec features audio
+• Tableau : Vue condensée avec statistiques et téléchargement CSV
+
+Mode Cartes :
+• Une carte par recommandation (fonction display_song_card)
+• Numérotation : "🎵 Recommandation #1", "#2", etc.
+• Section audio dépliable par défaut
+• Séparateurs visuels entre cartes
+
+Mode Tableau :
+• DataFrame Streamlit avec colonnes : #, Titre, Artiste, Genre, Album, Année, 
+  Score, Durée, Popularité
+• Statistiques en 3 colonnes :
+  ◦ Genres différents : Nombre de genres uniques
+  ◦ Artistes différents : Nombre d'artistes uniques
+  ◦ Score moyen : Moyenne des scores normalisés
+• Bouton téléchargement CSV :
+  ◦ Nom : "recommandations_[Modèle]_[UserID]_[Timestamp].csv"
+  ◦ Encodage UTF-8
+  ◦ Icône : 📥
+
+8.8 Onglet 3 : 📊 Comparaison
+
+A. Bouton de comparaison
+"🔄 Comparer les 3 modèles" (type primary)
+• Génère les recommandations pour Content-Based, Collaborative et Hybrid
+• Utilise get_recommendations_all_models(user_id, n)
+
+B. Affichage en 3 colonnes
+┌─────────────┬─────────────┬─────────────┐
+│ 🎸 Content  │ 🤝 Collab   │ 🔀 Hybrid   │
+├─────────────┼─────────────┼─────────────┤
+│ 1. SongA    │ 1. SongX    │ 1. SongM    │
+│ ArtistA     │ ArtistX     │ ArtistM     │
+│ Pop         │ Jazz        │ Rock        │
+│ Score: 0.85 │ Score: 0.92 │ Score: 0.88 │
+│ ───         │ ───         │ ───         │
+│ 2. SongB    │ 2. SongY    │ 2. SongN    │
+│ ...         │ ...         │ ...         │
+└─────────────┴─────────────┴─────────────┘
+
+• Affiche top 5 par modèle (pour lisibilité)
+• Normalisation des scores > 1.0
+• Message "Aucune recommandation (cold start)" si échec
+
+C. Graphique de distribution des genres
+Appel à plot_genre_distribution(all_recs)
+• Barres groupées par genre
+• Comparaison visuelle des 3 modèles
+
+D. Analyse de diversité
+1. Encadré explicatif (st.info) :
+   "📌 La diversité mesure la variété des genres musicaux
+   • Score élevé (>70%) = Découverte
+   • Score moyen (40-70%) = Équilibre
+   • Score faible (<40%) = Précision ciblée
+   Formule : (Genres uniques / Total chansons) × 100%"
+
+2. Métriques en 3 colonnes :
+   • Content-Based : X%
+   • Collaborative : Y%
+   • Hybrid : Z%
+   Avec tooltip indiquant "X genres différents sur Y chansons"
+
+8.9 Onglet 4 : 📈 Statistiques
+
+A. Résumé du projet
+Métriques globales (3 colonnes) :
+• Utilisateurs : 50
+• Chansons : 200
+• Interactions (train) : 56,101
+
+B. Graphique de comparaison des performances
+Fonction plot_model_comparison(stats)
+• Barres groupées : Precision@10, Coverage, Diversité (en %)
+• Lecture depuis modeling_summary.json
+
+C. Détails par modèle (3 colonnes)
+Pour chaque modèle (Content-Based, Collaborative, Hybrid) :
+• Precision@10 : XX.X%
+• Coverage : XX.X%
+• Diversité : XX.X%
+• Taux de succès : XX.X%
+(Collaborative et Hybrid ont aussi Precision Novelties)
+
+D. Recommandation pour production
+Encadré vert (st.success) :
+"🏆 Modèle recommandé pour production : Hybrid
+
+Raisons :
+ - ✅ Couverture utilisateurs : 100%
+ - ✅ Précision équilibrée : 74.6%
+ - ✅ Découverte : 10% (8× mieux que content-based)
+ - ✅ Robustesse : Fallback automatique"
+
+8.10 Optimisations et Bonnes Pratiques Implémentées
+
+A. Performance :
+• @st.cache_resource sur load_system() (TTL 1h)
+• Chargement unique des modèles au démarrage
+• Matrice de similarité en format sparse (économie mémoire)
+• Session state pour éviter recalculs inutiles
+
+B. Expérience utilisateur :
+• Interface propre : Aucun message de debug affiché
+• Feedback visuel : Spinners pendant les calculs
+• Messages clairs : Succès (vert), Erreurs (rouge), Infos (bleu)
+• Navigation intuitive : 4 onglets bien séparés
+
+C. Robustesse :
+• Gestion des valeurs manquantes (fillna, get avec défaut)
+• Normalisation automatique des scores
+• Dénormalisation intelligente des features audio
+• Fallback sur valeurs par défaut si fichiers manquants
+
+D. Maintenabilité :
+• Code modulaire : config.py, models.py, utils.py séparés
+• Fonctions réutilisables (display_song_card, plot_genre_distribution)
+• Constantes centralisées (GENRE_EMOJIS, COLOR_PRIMARY)
+• Documentation docstrings pour chaque fonction
+
+8.11 Captures d'Écran Recommandées
+(À ajouter dans le rapport final)
+
+1. Onglet Accueil : Profil utilisateur avec historique
+2. Onglet Recommandations (Mode Cartes) : Cartes détaillées
+3. Onglet Recommandations (Mode Tableau) : Vue tableau + CSV
+4. Onglet Comparaison : 3 colonnes avec graphiques
+5. Onglet Statistiques : Graphiques de performances
+
+8.12 Déploiement
+
+A. Exécution locale :
+```bash
+cd music-recommendation-system
+streamlit run app/streamlit_app.py
+```
+→ Ouvre automatiquement http://localhost:8501
+
+B. Options de déploiement cloud (futures) :
+• Streamlit Community Cloud (gratuit, recommandé)
+• Heroku (avec buildpack Python)
+• AWS EC2 / Google Cloud Run
+• Azure Web Apps
+
+C. Prérequis de déploiement :
+• requirements.txt avec versions exactes
+• Fichiers .pkl < 100 MB (OK pour ce projet)
+• Python 3.9+ recommandé
+
+8.13 Guide d'Utilisation pour l'Utilisateur Final
+
+1. Lancement de l'application
+   → Streamlit démarre automatiquement dans le navigateur
+
+2. Sélection d'un utilisateur (Sidebar)
+   → Choisir parmi 50 utilisateurs (ID 1000-1049)
+
+3. Exploration du profil (Onglet Accueil)
+   → Consulter l'historique et les préférences
+
+4. Génération de recommandations (Onglet Recommandations)
+   a. Sélectionner un modèle (Content, Collaborative ou Hybrid)
+   b. Ajuster le nombre de recommandations (5-20)
+   c. Si Hybrid : Ajuster α et β dans la sidebar
+   d. Cliquer sur "Générer les recommandations"
+   e. Choisir le mode d'affichage (Cartes ou Tableau)
+   f. Explorer les détails audio de chaque chanson
+   g. (Mode Tableau) Télécharger le CSV si besoin
+
+5. Comparaison des modèles (Onglet Comparaison)
+   → Comparer les résultats des 3 approches côte à côte
+   → Analyser la diversité de chaque modèle
+
+6. Consultation des statistiques (Onglet Statistiques)
+   → Comprendre les performances globales
+   → Identifier le modèle optimal
+
+8.14 Retour d'Expérience sur le Développement
+
+A. Défis rencontrés :
+• Dénormalisation des features audio : Nécessité de détecter automatiquement 
+  si les valeurs sont normalisées ([-1,1]) ou brutes
+• Persistance des recommandations : Problème initial où changer le mode 
+  d'affichage effaçait les résultats → Résolu avec st.session_state
+• Gestion du cold start : 42% des utilisateurs sans recommandations 
+  collaboratives → Résolu avec le modèle hybrid et fallback
+
+B. Solutions innovantes :
+• Fonction de dénormalisation intelligente dans utils.py
+• Système de session_state pour fluidité de navigation
+• Affichage conditionnel "N/A" au lieu de 0.000 pour meilleure UX
+• Bouton de téléchargement CSV avec horodatage dans le nom
+
+C. Améliorations futures possibles :
+• Système de feedback utilisateur (👍👎 sur chaque recommandation)
+• Playlists personnalisées (sauvegarde des favoris)
+• Recherche de chansons par titre/artiste
+• Filtres avancés (genre, année, tempo)
+• Mode sombre / clair
+• Graphiques interactifs avancés (radar chart des features audio)
+• Intégration API Spotify pour prévisualisation audio
+
+8.15 Conclusion de la Partie Application
+
+L'application Streamlit développée constitue une interface professionnelle et 
+intuitive pour le système de recommandation musicale. Elle permet :
+
+✅ Une exploration complète des recommandations des 3 modèles
+✅ Une visualisation détaillée des features audio de chaque chanson
+✅ Une comparaison objective des performances
+✅ Une expérience utilisateur fluide et sans friction
+✅ Un outil de validation et de démonstration du projet
+
+L'interface répond aux objectifs fixés et offre une base solide pour un 
+déploiement en production après enrichissement avec un dataset plus large.
 
 
-✅ 9. CONCLUSION
-Ce projet a permis de développer avec succès un système de recommandation musicale hybride performant. Les résultats démontrent que :
+🔍 9. LIMITATIONS ET PERSPECTIVES
+[Reprendre la partie 7 existante]
 
-✅ Le split stratifié permet une évaluation robuste
-✅ Le modèle hybrid résout efficacement le cold start
-✅ Les performances sont comparables aux standards industriels
-✅ Le système est prêt pour le déploiement
+✅ 10. CONCLUSION GÉNÉRALE
+[Reprendre et enrichir la conclusion existante]
 
-Contribution principale : Développement d'un modèle hybrid avec fallback intelligent garantissant 100% de couverture utilisateurs tout en maintenant d'excellentes performances.
+Ce projet a permis de développer avec succès un système de recommandation 
+musicale complet, de l'exploration des données jusqu'au déploiement d'une 
+application web interactive. Les résultats démontrent que :
 
-📚 10. RÉFÉRENCES
+✅ Le pipeline de prétraitement permet une évaluation robuste et reproductible
+✅ Le modèle hybrid résout efficacement le problème du cold start
+✅ Les performances sont comparables aux standards industriels (74.6% précision)
+✅ L'application Streamlit offre une interface professionnelle et intuitive
+✅ Le système est prêt pour un déploiement en production (après scaling)
 
-Dataset : MCRec-30M (domaine public)
-Librairie : Surprise (recommender systems)
-Métriques : Precision@K, NDCG (standards industriels)
-Architecture : Content-Based + Collaborative + Hybrid
+Contributions principales :
+1. Développement d'un modèle hybrid avec fallback intelligent garantissant 
+   100% de couverture utilisateurs
+2. Pipeline de prétraitement avec split stratifié par utilisateur
+3. Application web complète avec 4 modes de visualisation
+4. Système de dénormalisation automatique des features audio pour l'affichage
+
+Impact potentiel :
+• Base solide pour un système de recommandation réel
+• Architecture réutilisable pour d'autres projets de recommandation
+• Documentation complète facilitant la maintenance et l'évolution
+
+
+📚 11. RÉFÉRENCES
+
+Dataset :
+• MCRec-30M (Music Contextual Recommendation Dataset)
+• Source : Domaine public, adapté pour ce projet
+• Taille : 70,129 interactions, 50 utilisateurs, 200 chansons
+
+Librairies et Frameworks :
+• Surprise 1.1.3 : Algorithmes de recommandation (SVD)
+• Scikit-learn 1.3+ : Normalisation, similarité cosinus
+• Pandas 2.1+ : Manipulation de données
+• Streamlit 1.28+ : Interface web
+• Plotly 5.18+ : Visualisations interactives
+
+Métriques et Standards :
+• Precision@K, Recall@K, NDCG : Métriques standards en recommandation
+• Coverage : Pourcentage du catalogue recommandé
+• Diversity : Variété des genres et artistes recommandés
+
+Références académiques :
+• Koren, Y. et al. (2009). "Matrix Factorization Techniques for Recommender Systems"
+• Herlocker, J. et al. (2004). "Evaluating Collaborative Filtering Recommender Systems"
+• Ricci, F. et al. (2015). "Recommender Systems Handbook"
+
+Documentation :
+• Surprise Documentation : https://surprise.readthedocs.io/
+• Streamlit Documentation : https://docs.streamlit.io/
+• Scikit-learn User Guide : https://scikit-learn.org/stable/user_guide.html
+
+
+📊 12. ANNEXES
+
+A. Structure Complète des Fichiers
+[Arborescence détaillée du projet]
+
+B. Configuration YAML Complète
+[Contenu de config.yaml]
+
+C. Fonctions Principales
+[Signatures des fonctions clés avec docstrings]
+
+D. Commandes d'Exécution
+[Liste des commandes pour reproduire le projet]
+
+E. Dépendances (requirements.txt)
+```
+streamlit==1.28.0
+pandas==2.1.0
+numpy==1.24.0
+scikit-learn==1.3.0
+scikit-surprise==1.1.3
+plotly==5.18.0
+scipy==1.11.0
+pyyaml==6.0.1
+```
+
+
+📝 FIN DU RAPPORT
+
