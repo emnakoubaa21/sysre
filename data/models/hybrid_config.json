@@ -1,0 +1,5 @@
+{
+    "content_weight": 0.5,
+    "collaborative_weight": 0.5,
+    "n_recommendations": 10
+}

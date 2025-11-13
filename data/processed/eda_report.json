@@ -1,0 +1,40 @@
+{
+    "dataset_shape": [
+        70129,
+        51
+    ],
+    "n_users": 50,
+    "n_songs": 200,
+    "n_artists": 3,
+    "n_genres": 5,
+    "n_interactions": 70129,
+    "duplicates": 0,
+    "user_interactions_mean": 1402.58,
+    "user_interactions_median": 1401.5,
+    "liked_rate": 0.2981220322548446,
+    "skip_rate": 0.9940680745483323,
+    "completion_rate": 0.6997675711902351,
+    "audio_features": [
+        "tempo",
+        "energy",
+        "danceability",
+        "acousticness",
+        "instrumentalness",
+        "liveness",
+        "valence",
+        "loudness",
+        "speechiness"
+    ],
+    "top_genres": {
+        "Pop": 42141,
+        "Rock": 14032,
+        "Jazz": 6991,
+        "EDM": 4888,
+        "Classical": 2077
+    },
+    "top_artists": {
+        "ArtistA": 42304,
+        "ArtistB": 20922,
+        "ArtistC": 6903
+    }
+}

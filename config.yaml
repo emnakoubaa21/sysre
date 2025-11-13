@@ -1,0 +1,86 @@
+# Configuration du projet Music Recommendation System
+project:
+  name: "Music Recommendation System"
+  version: "1.0.0"
+  author: "Votre Nom"
+  description: "Système de recommandation musicale basé sur MCRec-30M"
+
+# Chemins des données
+paths:
+  raw_data: "data/raw/personalized_music_recommendation_dataset.csv"
+  processed_data: "data/processed/"
+  models: "data/models/"
+  
+# Paramètres de prétraitement
+preprocessing:
+  test_size: 0.2
+  random_state: 42
+  min_interactions_per_user: 3  # Réduit de 5 à 3 pour garder plus d'utilisateurs
+  min_interactions_per_song: 3   # Réduit de 5 à 3 pour garder plus de chansons
+  sample_size: null
+  split_type: "stratified"  # "stratified" ou "temporal"
+  
+# Features audio à normaliser
+audio_features:
+  - tempo
+  - energy
+  - danceability
+  - acousticness
+  - instrumentalness
+  - liveness
+  - valence
+  - loudness
+  - speechiness
+
+# Features textuelles
+text_features:
+  - genre
+  - artist
+  - emotion_tag
+  - language
+
+# Paramètres du modèle Content-Based
+content_based:
+  similarity_metric: "cosine"
+  n_recommendations: 10
+  audio_weight: 0.7
+  text_weight: 0.3
+
+# Paramètres du modèle Collaborative Filtering
+collaborative:
+  algorithm: "SVD"
+  n_factors: 40  # Réduit de 50 à 40 pour éviter l'overfitting sur petit dataset
+  n_epochs: 20
+  lr_all: 0.005
+  reg_all: 0.02
+  n_recommendations: 10
+
+# Paramètres du modèle Hybride
+hybrid:
+  content_weight: 0.5  # Équilibré
+  collaborative_weight: 0.5  # Équilibré
+  n_recommendations: 10
+  diversity_penalty: 0.1
+
+# Métriques d'évaluation
+evaluation:
+  metrics:
+    - "precision_at_k"
+    - "recall_at_k"
+    - "ndcg_at_k"
+    - "coverage"
+    - "diversity"
+  k_values: [5, 10, 20]
+
+# Paramètres Streamlit
+streamlit:
+  page_title: "🎵 Music Recommendation System"
+  page_icon: "🎵"
+  layout: "wide"
+  initial_sidebar_state: "expanded"
+  default_model: "hybrid"
+  theme:
+    primaryColor: "#1DB954"
+    backgroundColor: "#191414"
+    secondaryBackgroundColor: "#282828"
+    textColor: "#FFFFFF"

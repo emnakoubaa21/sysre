@@ -1,0 +1,75 @@
+{
+    "project": "Music Recommendation System",
+    "timestamp": "2025-11-13T11:33:49.896093",
+    "dataset": {
+        "n_users": 50,
+        "n_songs": 200,
+        "n_interactions_train": 56101,
+        "n_interactions_test": 14028
+    },
+    "models_trained": [
+        "content_based",
+        "collaborative",
+        "hybrid"
+    ],
+    "best_model": "Content-Based",
+    "best_model_precision": 0.7480000000000001,
+    "content_based": {
+        "type": "Cosine Similarity",
+        "n_songs": 200,
+        "success_rate": 1.0,
+        "precision_at_10": 0.7480000000000001,
+        "recall_at_10": 0.04943262890663979,
+        "coverage": 0.995,
+        "diversity_genre": 0.15
+    },
+    "collaborative": {
+        "algorithm": "SVD (Matrix Factorization)",
+        "library": "Surprise",
+        "n_users_trained": 29,
+        "n_items": 200,
+        "n_factors": 40,
+        "success_rate": 0.58,
+        "precision_at_10": 0.7471264367816091,
+        "precision_at_10_novelties": 0.867,
+        "recall_at_10": 0.007480236495889232,
+        "coverage": 0.205,
+        "diversity_genre": 0.6666666666666666
+    },
+    "hybrid": {
+        "strategy": "Weighted Blend with Intelligent Fallback",
+        "content_weight": 0.5,
+        "collaborative_weight": 0.5,
+        "success_rate": 1.0,
+        "precision_at_10": 0.746,
+        "precision_at_10_novelties": 0.1,
+        "recall_at_10": 0.04930425296541317,
+        "coverage": 0.91,
+        "diversity_genre": 0.2
+    },
+    "evaluation_metrics": {
+        "k_values": [
+            5,
+            10,
+            20
+        ],
+        "n_users_evaluated": 50,
+        "metrics": [
+            "Precision@K",
+            "Recall@K",
+            "NDCG@K",
+            "Coverage",
+            "Diversity"
+        ]
+    },
+    "recommendation": {
+        "production_model": "Hybrid",
+        "reasons": [
+            "100% user coverage",
+            "Balanced performance",
+            "High catalog coverage (91%)",
+            "8x better novelty discovery than content-based",
+            "No cold start issues"
+        ]
+    }
+}

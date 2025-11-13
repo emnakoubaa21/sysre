@@ -1,0 +1,49 @@
+{
+    "original_size": 70129,
+    "filtered_size": 70129,
+    "reduction_pct": 0.0,
+    "train_size": 56101,
+    "test_size": 14028,
+    "n_users": 50,
+    "n_songs": 200,
+    "n_genres": 5,
+    "n_artists": 3,
+    "audio_features": [
+        "tempo",
+        "energy",
+        "danceability",
+        "acousticness",
+        "instrumentalness",
+        "liveness",
+        "valence",
+        "loudness",
+        "speechiness"
+    ],
+    "categorical_features": [
+        "gender",
+        "location",
+        "device_type",
+        "subscription_type",
+        "time_of_day",
+        "day_of_week",
+        "preferred_genre",
+        "genre",
+        "artist",
+        "emotion_tag",
+        "context_type",
+        "language",
+        "explicit"
+    ],
+    "min_interactions_per_user": 3,
+    "min_interactions_per_song": 3,
+    "interaction_score_stats": {
+        "count": 70129.0,
+        "mean": 1.398723139441195,
+        "std": 0.6808208839999994,
+        "min": 0.0,
+        "25%": 0.8256880733944955,
+        "50%": 1.3302752293577982,
+        "75%": 1.8807339449541285,
+        "max": 5.0
+    }
+}
